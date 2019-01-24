@@ -14,11 +14,11 @@ import android.view.animation.*
 class PiChart @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
+    // Data
+    private var data: PiData? = null
+
     // State
     private var pieState = PieState.MINIMIZED
-    private val timesheetDays = mutableListOf<TimesheetDay>()
-    private val pieList = HashMap<String, PieItem>()
-    private var totalHours = 0.0
     private var initialHeight: Int = 0
     private var selectedPiePiece = ""
     private var selectedPiePieceSweepAngle = 0f
@@ -98,13 +98,33 @@ class PiChart @JvmOverloads constructor(
      *
      * @param timesheetDays the new set of timesheet data to be represented by the pie chart
      */
-    fun populateTimesheetDays(timesheetDays: MutableList<TimesheetDay>) {
-        this.timesheetDays.clear()
-        this.timesheetDays.addAll(timesheetDays)
-        this.totalHours = 0.0
+    fun setData(data: PiData) {
+        this.data = data
         if (this.initialHeight == 0) this.initialHeight = layoutParams.height
-        populatePieList()
+        setPieSliceDimensions()
         invalidate()
+    }
+
+    /**
+     * Calculates and sets the dimensions of the pie slices in the pie chart
+     */
+    private fun setPieSliceDimensions() {
+        var lastAngle = 0f
+        data?.pieSlices?.forEach {
+            // starting angle is the location of the last angle drawn
+            it.value.startAngle = lastAngle
+            // sweep angle is determined by multiplying the percentage of the project time with respect
+            // to the total time recorded and scaling it to unit circle degrees by multiplying by 360
+            it.value.sweepAngle = (((it.value.value / data?.totalValue!!)) * 360f).toFloat()
+            lastAngle += it.value.sweepAngle
+            // use the angle between the start and sweep angles to help get position of the indicator circle
+            // formula for x pos: (length of line) * cos(middleAngle) + (distance from left edge of screen)
+            // formula for y pos: (length of line) * sin(middleAngle) + (distance from top edge of screen)
+            val middleAngle = it.value.sweepAngle / 2 + it.value.startAngle
+
+            it.value.indicatorCircleLocation.x = (layoutParams.height.toFloat() / 2 - layoutParams.height / 8) * Math.cos(Math.toRadians(middleAngle.toDouble())).toFloat() + width / 2
+            it.value.indicatorCircleLocation.y = (layoutParams.height.toFloat() / 2 - layoutParams.height / 8) * Math.sin(Math.toRadians(middleAngle.toDouble())).toFloat() + layoutParams.height / 2
+        }
     }
 
     /**
@@ -138,8 +158,9 @@ class PiChart @JvmOverloads constructor(
      * @param left the left bound of the circle. half of height by default
      * @param right the right bound of the circle. hald of height by default
      */
-    private fun setCircleBounds(top: Float = 0f, bottom: Float = layoutParams.height.toFloat(), left: Float = width / 2 - (layoutParams.height / 2).toFloat(),
-                                right: Float = width / 2 + (layoutParams.height / 2).toFloat()) {
+    private fun setCircleBounds(top: Float = 0f, bottom: Float = layoutParams.height.toFloat(),
+                                left: Float = (width / 2) - (layoutParams.height / 2).toFloat(),
+                                right: Float = (width / 2) + (layoutParams.height / 2).toFloat()) {
         oval.top = top
         oval.bottom = bottom
         oval.left = left
@@ -155,62 +176,6 @@ class PiChart @JvmOverloads constructor(
         titleBackground.bottom = bottom
         titleBackground.left = left
         titleBackground.right = right
-    }
-
-    /**
-     * Populates list of pie slices and their dimensions on the view
-     */
-    private fun populatePieList() {
-        val entries = mutableListOf<TimesheetEntry>()
-        pieList.clear()
-        timesheetDays.forEach { day -> entries.addAll(day.entries) }
-
-        // Create pie slices per project
-        entries.forEach { entry ->
-            // Create key for each project using it's client id, project id, and deliverable id
-            val projectKey = entry.client?.id.toString() + "," + entry.project?.id.toString() + "," + entry.deliverable?.id.toString()
-            if (pieList.containsKey(projectKey))
-                pieList[projectKey]!!.hours += entry.hours!!
-            else
-                pieList[projectKey] = PieItem(entry.client?.code!! + " " + entry.project?.nickname,
-                    createPaint(entry.client.color), entry.hours!!, 0f, 0f, PointF(),
-                    entry.deliverable?.name, entry.client.name, entry.project?.name, entry.role?.name.orEmpty())
-            totalHours += entry.hours
-        }
-        setPieSliceDimensions()
-    }
-
-    /**
-     * Dynamically create paints for a given project
-     *
-     * @param color the color of the paint to create
-     */
-    private fun createPaint(color: String): Paint {
-        val newPaint = Paint()
-        newPaint.color = Color.parseColor(color)
-        newPaint.isAntiAlias = true
-        return newPaint
-    }
-
-    /**
-     * Calculates and sets the dimensions of the pie slices in the pie chart
-     */
-    private fun setPieSliceDimensions() {
-        var lastAngle = 0f
-        pieList.forEach {
-            // starting angle is the location of the last angle drawn
-            it.value.startAngle = lastAngle
-            // sweep angle is determined by multiplying the percentage of the project time with respect
-            // to the total time recorded and scaling it to unit circle degrees by multiplying by 360
-            it.value.sweepAngle = (((it.value.hours / totalHours)) * 360f).toFloat()
-            lastAngle += it.value.sweepAngle
-            // use the angle between the start and sweep angles to help get position of the indicator circle
-            // formula for x pos: (length of line) * cos(middleAngle) + (distance from left edge of screen)
-            // formula for y pos: (length of line) * sin(middleAngle) + (distance from top edge of screen)
-            val middleAngle = it.value.sweepAngle / 2 + it.value.startAngle
-            it.value.indicatorCircle.x = (layoutParams.height.toFloat() / 2 - layoutParams.height / 8) * Math.cos(Math.toRadians(middleAngle.toDouble())).toFloat() + width / 2
-            it.value.indicatorCircle.y = (layoutParams.height.toFloat() / 2 - layoutParams.height / 8) * Math.sin(Math.toRadians(middleAngle.toDouble())).toFloat() + layoutParams.height / 2
-        }
     }
 
     /**
@@ -233,7 +198,7 @@ class PiChart @JvmOverloads constructor(
                 PieState.EXPANDED -> {
                     pieState = PieState.ANIMATING
                     var foundEntry = false
-                    pieList.forEach {
+                    data?.pieSlices?.forEach {
                         if (projectClicked(event, it.value)) {
                             foundEntry = true
                             selectedPiePiece = it.key
@@ -263,20 +228,20 @@ class PiChart @JvmOverloads constructor(
      * @param event the recorded motion event
      * @param pieItem the pieItem being evaluated for a click
      */
-    private fun projectClicked(event: MotionEvent, pieItem: PieItem): Boolean {
+    private fun projectClicked(event: MotionEvent, pieItem: PieSlice): Boolean {
         // if project is to the right of the pie chart
-        if (pieItem.indicatorCircle.x > width / 2) {
-            if (event.x > pieItem.indicatorCircle.x &&
-                event.x < pieItem.indicatorCircle.x + width / 4 &&
-                event.y > pieItem.indicatorCircle.y - mainTextPaint.textSize - 10 &&
-                event.y < pieItem.indicatorCircle.y + 20) {
+        if (pieItem.indicatorCircleLocation.x > width / 2) {
+            if (event.x > pieItem.indicatorCircleLocation.x &&
+                event.x < pieItem.indicatorCircleLocation.x + width / 4 &&
+                event.y > pieItem.indicatorCircleLocation.y - mainTextPaint.textSize - 10 &&
+                event.y < pieItem.indicatorCircleLocation.y + 20) {
                 return true
             }
             // if project is to the left of the pie chart
-        } else if (event.x < pieItem.indicatorCircle.x &&
-            event.x > pieItem.indicatorCircle.x - width / 4 &&
-            event.y > pieItem.indicatorCircle.y - mainTextPaint.textSize - 10 &&
-            event.y < pieItem.indicatorCircle.y + 20) {
+        } else if (event.x < pieItem.indicatorCircleLocation.x &&
+            event.x > pieItem.indicatorCircleLocation.x - width / 4 &&
+            event.y > pieItem.indicatorCircleLocation.y - mainTextPaint.textSize - 10 &&
+            event.y < pieItem.indicatorCircleLocation.y + 20) {
             return true
         }
         return false
@@ -290,26 +255,26 @@ class PiChart @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
 
-        // only draw if there are projects present
-        if (pieList.isNotEmpty()) {
-            pieList.forEach {
+
+        data?.pieSlices?.let { slices ->
+            slices.forEach {
                 // draw all pie slices except the selected one. we draw the selected one after so that
                 // it can overlap these during it's selected animation
-                if (it.value != pieList[selectedPiePiece]) {
+                if (it.value != data?.pieSlices!![selectedPiePiece]) {
                     canvas?.drawArc(oval, it.value.startAngle, it.value.sweepAngle, true, it.value.paint)
                     canvas?.drawArc(oval, it.value.startAngle, it.value.sweepAngle, true, borderPaint)
                     drawIndicators(canvas, it.value)
                 }
             }
             // draw the selected pie piece last so that it can overlap the others during the select animation
-            pieList[selectedPiePiece]?.let {
+            slices[selectedPiePiece]?.let {
                 canvas?.drawArc(oval, it.startAngle, it.sweepAngle, true, it.paint)
                 drawIndicators(canvas, it)
                 if (pieState != PieState.PROJECT_SELECTED && pieState != PieState.ANIMATING) {
                     canvas?.drawArc(oval, it.startAngle, it.sweepAngle, true, borderPaint)
                 } else {
                     canvas?.drawRoundRect(titleBackground, oval.bottom / 2, oval.bottom / 2, it.paint)
-                    canvas?.drawText(it.clientName.orEmpty(), width / 2.toFloat(), (oval.bottom - titleTextPaint.textSize) + 5, titleTextPaint)
+                    canvas?.drawText(it.name, width / 2.toFloat(), (oval.bottom - titleTextPaint.textSize) + 5, titleTextPaint)
                     drawDetails(canvas, it)
                 }
             }
@@ -322,7 +287,7 @@ class PiChart @JvmOverloads constructor(
      * @param canvas the canvas used to draw onto the screen
      * @param pieItem the project information to display
      */
-    private fun drawDetails(canvas: Canvas?, pieItem: PieItem) {
+    private fun drawDetails(canvas: Canvas?, pieItem: PieSlice) {
         canvas?.drawText("Role", width / 2.toFloat() + width / 4.toFloat(),
             layoutParams.height / 2.5.toFloat(), detailsTextPaint)
         canvas?.drawText("Deliverable", width / 4.toFloat(),
@@ -332,13 +297,13 @@ class PiChart @JvmOverloads constructor(
         canvas?.drawText("Time Allotted", width / 2.toFloat() + width / 4.toFloat(),
             layoutParams.height / 2.toFloat() + layoutParams.height / 4.toFloat(), detailsTextPaint)
 
-        canvas?.drawText(pieItem.role, width / 2.toFloat() + width / 4.toFloat(),
+        canvas?.drawText("ROLE", width / 2.toFloat() + width / 4.toFloat(),
             layoutParams.height / 2.5.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
-        canvas?.drawText(pieItem.deliverable.orEmpty(), width / 4.toFloat(),
+        canvas?.drawText("DELIVERABLE", width / 4.toFloat(),
             layoutParams.height / 2.5.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
-        canvas?.drawText(pieItem.projectName.orEmpty(), width / 4.toFloat(),
+        canvas?.drawText("PROJECT NAME", width / 4.toFloat(),
             layoutParams.height / 2.toFloat() + layoutParams.height / 4.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
-        canvas?.drawText(pieItem.hours.toString() + " hours", width / 2.toFloat() + width / 4.toFloat(),
+        canvas?.drawText("HOURS", width / 2.toFloat() + width / 4.toFloat(),
             layoutParams.height / 2.toFloat() + layoutParams.height / 4.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
     }
 
@@ -348,22 +313,22 @@ class PiChart @JvmOverloads constructor(
      * @param canvas the canvas used to draw onto the screen
      * @param pieItem the project information to display
      */
-    private fun drawIndicators(canvas: Canvas?, pieItem: PieItem) {
+    private fun drawIndicators(canvas: Canvas?, pieItem: PieSlice) {
         // draw line & text for indicator circle if on left side of the pie chart
-        if (pieItem.indicatorCircle.x < width / 2) {
-            canvas?.drawLine(pieItem.indicatorCircle.x, pieItem.indicatorCircle.y,
-                pieItem.indicatorCircle.x - width / 4, pieItem.indicatorCircle.y, linePaint)
+        if (pieItem.indicatorCircleLocation.x < width / 2) {
+            canvas?.drawLine(pieItem.indicatorCircleLocation.x, pieItem.indicatorCircleLocation.y,
+                pieItem.indicatorCircleLocation.x - width / 4, pieItem.indicatorCircleLocation.y, linePaint)
             mainTextPaint.textAlign = Paint.Align.LEFT
-            canvas?.drawText(pieItem.name, pieItem.indicatorCircle.x - width / 4, pieItem.indicatorCircle.y - 10, mainTextPaint)
+            canvas?.drawText(pieItem.name, pieItem.indicatorCircleLocation.x - width / 4, pieItem.indicatorCircleLocation.y - 10, mainTextPaint)
             // draw line & text for indicator circle if on right side of the pie chart
         } else {
-            canvas?.drawLine(pieItem.indicatorCircle.x, pieItem.indicatorCircle.y,
-                pieItem.indicatorCircle.x + width / 4, pieItem.indicatorCircle.y, linePaint)
+            canvas?.drawLine(pieItem.indicatorCircleLocation.x, pieItem.indicatorCircleLocation.y,
+                pieItem.indicatorCircleLocation.x + width / 4, pieItem.indicatorCircleLocation.y, linePaint)
             mainTextPaint.textAlign = Paint.Align.RIGHT
-            canvas?.drawText(pieItem.name, pieItem.indicatorCircle.x + width / 4, pieItem.indicatorCircle.y - 10, mainTextPaint)
+            canvas?.drawText(pieItem.name, pieItem.indicatorCircleLocation.x + width / 4, pieItem.indicatorCircleLocation.y - 10, mainTextPaint)
         }
         // draw indicator circles for pie slice
-        canvas?.drawCircle(pieItem.indicatorCircle.x, pieItem.indicatorCircle.y, initialHeight / 30f, indicatorCirclePaint)
+        canvas?.drawCircle(pieItem.indicatorCircleLocation.x, pieItem.indicatorCircleLocation.y, initialHeight / 30f, indicatorCirclePaint)
     }
 
     /**
@@ -504,7 +469,7 @@ class PiChart @JvmOverloads constructor(
         angleUp.duration = 350
         angleUp.interpolator = DecelerateInterpolator()
         angleUp.addUpdateListener { valueAnimator ->
-            pieList[selectedPiePiece]?.sweepAngle = valueAnimator.animatedValue as Float
+            data?.pieSlices!![selectedPiePiece]?.sweepAngle = valueAnimator.animatedValue as Float
             invalidate()
         }
         angleUp.addListener(object : AnimatorListenerAdapter() {
@@ -518,7 +483,7 @@ class PiChart @JvmOverloads constructor(
         angleDown.duration = 300
         angleDown.interpolator = AccelerateDecelerateInterpolator()
         angleDown.addUpdateListener { valueAnimator ->
-            pieList[selectedPiePiece]?.sweepAngle = valueAnimator.animatedValue as Float
+            data?.pieSlices!![selectedPiePiece]?.sweepAngle = valueAnimator.animatedValue as Float
             invalidate()
         }
         angleDown.addListener(object : AnimatorListenerAdapter() {
