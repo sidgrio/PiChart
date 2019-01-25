@@ -127,14 +127,9 @@ class PiChart @JvmOverloads constructor(
         }
     }
 
-    /**
-     * Set bounds for pie circle graphic and sizes for canvas graphics
-     *
-     * @param widthMeasureSpec width of view
-     * @param heightMeasureSpec height of view
-     */
-    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
+        super.onLayout(changed, left, top, right, bottom)
+        // Set bounds for pie circle graphic and sizes for canvas graphics
         setCircleBounds()
         setGraphicSizes()
     }
@@ -254,7 +249,6 @@ class PiChart @JvmOverloads constructor(
      */
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-
 
         data?.pieSlices?.let { slices ->
             slices.forEach {
