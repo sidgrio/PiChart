@@ -33,6 +33,7 @@ class PiChart @JvmOverloads constructor(
     private val detailsTextPaint = Paint()
     private val oval = RectF()
     private val titleBackground = RectF()
+    private var indicatorCircleRadius = 0f
 
     // Animations
     private val expandAnimator = ValueAnimator.ofInt()
@@ -122,14 +123,14 @@ class PiChart @JvmOverloads constructor(
             // formula for y pos: (length of line) * sin(middleAngle) + (distance from top edge of screen)
             val middleAngle = it.value.sweepAngle / 2 + it.value.startAngle
 
-            it.value.indicatorCircleLocation.x = (layoutParams.height.toFloat() / 2 - layoutParams.height / 8) * Math.cos(Math.toRadians(middleAngle.toDouble())).toFloat() + width / 2
-            it.value.indicatorCircleLocation.y = (layoutParams.height.toFloat() / 2 - layoutParams.height / 8) * Math.sin(Math.toRadians(middleAngle.toDouble())).toFloat() + layoutParams.height / 2
+            it.value.indicatorCircleLocation.x = (3 * layoutParams.height / 8) * Math.cos(Math.toRadians(middleAngle.toDouble())).toFloat() + width / 2
+            it.value.indicatorCircleLocation.y = (3 * layoutParams.height / 8) * Math.sin(Math.toRadians(middleAngle.toDouble())).toFloat() + layoutParams.height / 2
         }
     }
 
-    override fun onLayout(changed: Boolean, left: Int, top: Int, right: Int, bottom: Int) {
-        super.onLayout(changed, left, top, right, bottom)
-        // Set bounds for pie circle graphic and sizes for canvas graphics
+
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
         setCircleBounds()
         setGraphicSizes()
     }
@@ -138,11 +139,12 @@ class PiChart @JvmOverloads constructor(
      * Sets the text sizes and thickness of graphics used in the view
      */
     private fun setGraphicSizes() {
-        mainTextPaint.textSize = initialHeight / 4.5.toFloat()
-        titleTextPaint.textSize = initialHeight / 3.5.toFloat()
-        detailsTextPaint.textSize = initialHeight / 3.5.toFloat()
-        borderPaint.strokeWidth = initialHeight / 40.toFloat()
-        linePaint.strokeWidth = initialHeight / 40.toFloat()
+        mainTextPaint.textSize = height / 12f
+        borderPaint.strokeWidth = height / 80f
+        linePaint.strokeWidth = height / 120f
+        indicatorCircleRadius = height / 70f
+        titleTextPaint.textSize = height / 12f
+        detailsTextPaint.textSize = height / 12f
     }
 
     /**
@@ -322,7 +324,7 @@ class PiChart @JvmOverloads constructor(
             canvas?.drawText(pieItem.name, pieItem.indicatorCircleLocation.x + width / 4, pieItem.indicatorCircleLocation.y - 10, mainTextPaint)
         }
         // draw indicator circles for pie slice
-        canvas?.drawCircle(pieItem.indicatorCircleLocation.x, pieItem.indicatorCircleLocation.y, initialHeight / 30f, indicatorCirclePaint)
+        canvas?.drawCircle(pieItem.indicatorCircleLocation.x, pieItem.indicatorCircleLocation.y, indicatorCircleRadius, indicatorCirclePaint)
     }
 
     /**
