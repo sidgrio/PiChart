@@ -10,12 +10,15 @@ import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
 import android.view.animation.*
+import android.widget.RelativeLayout
 
 class PiChart @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
     // Data
     private var data: PiData? = null
+    private var details: View? = null
+    private var relativeLayout: RelativeLayout? = null
 
     // State
     private var pieState = PieState.MINIMIZED
@@ -47,7 +50,7 @@ class PiChart @JvmOverloads constructor(
     private val expandTitleRight = ValueAnimator.ofFloat()
     private val shrinkChart = ValueAnimator.ofFloat()
     private val titleAlpha = ValueAnimator.ofFloat()
-    private val detailsTextAlpha = ValueAnimator.ofInt()
+    private val detailsAlpha = ValueAnimator.ofFloat()
     private val animateProjectSelection = AnimatorSet()
     private val titleCollapser = AnimatorSet()
     private val titleExpander = AnimatorSet()
@@ -97,13 +100,20 @@ class PiChart @JvmOverloads constructor(
     /**
      * Populates the timesheetDays and sets up the view based off the new data
      *
-     * @param timesheetDays the new set of timesheet data to be represented by the pie chart
+     * @param data the new set of data to be represented by the pie chart
      */
     fun setData(data: PiData) {
         this.data = data
         if (this.initialHeight == 0) this.initialHeight = layoutParams.height
         setPieSliceDimensions()
         invalidate()
+    }
+
+    fun setView(view: View) {
+        relativeLayout = RelativeLayout(context)
+        details = view
+        relativeLayout?.addView(details)
+        details?.alpha = 0f
     }
 
     /**
@@ -201,6 +211,10 @@ class PiChart @JvmOverloads constructor(
                             selectedPiePiece = it.key
                             selectedPiePieceSweepAngle = it.value.sweepAngle
                             selectedPiePieceStartAngle = it.value.startAngle
+
+                            relativeLayout?.layout(0,0,width,height)
+                            details?.layout(0,initialHeight,width, height)
+
                             selectProject()
                             return@forEach
                         }
@@ -284,23 +298,24 @@ class PiChart @JvmOverloads constructor(
      * @param pieItem the project information to display
      */
     private fun drawDetails(canvas: Canvas?, pieItem: PieSlice) {
-        canvas?.drawText("Role", width / 2.toFloat() + width / 4.toFloat(),
-            layoutParams.height / 2.5.toFloat(), detailsTextPaint)
-        canvas?.drawText("Deliverable", width / 4.toFloat(),
-            layoutParams.height / 2.5.toFloat(), detailsTextPaint)
-        canvas?.drawText("Project", width / 4.toFloat(),
-            layoutParams.height / 2.toFloat() + layoutParams.height / 4.toFloat(), detailsTextPaint)
-        canvas?.drawText("Time Allotted", width / 2.toFloat() + width / 4.toFloat(),
-            layoutParams.height / 2.toFloat() + layoutParams.height / 4.toFloat(), detailsTextPaint)
-
-        canvas?.drawText("ROLE", width / 2.toFloat() + width / 4.toFloat(),
-            layoutParams.height / 2.5.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
-        canvas?.drawText("DELIVERABLE", width / 4.toFloat(),
-            layoutParams.height / 2.5.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
-        canvas?.drawText("PROJECT NAME", width / 4.toFloat(),
-            layoutParams.height / 2.toFloat() + layoutParams.height / 4.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
-        canvas?.drawText("HOURS", width / 2.toFloat() + width / 4.toFloat(),
-            layoutParams.height / 2.toFloat() + layoutParams.height / 4.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
+//        canvas?.drawText("Role", width / 2.toFloat() + width / 4.toFloat(),
+//            layoutParams.height / 2.5.toFloat(), detailsTextPaint)
+//        canvas?.drawText("Deliverable", width / 4.toFloat(),
+//            layoutParams.height / 2.5.toFloat(), detailsTextPaint)
+//        canvas?.drawText("Project", width / 4.toFloat(),
+//            layoutParams.height / 2.toFloat() + layoutParams.height / 4.toFloat(), detailsTextPaint)
+//        canvas?.drawText("Time Allotted", width / 2.toFloat() + width / 4.toFloat(),
+//            layoutParams.height / 2.toFloat() + layoutParams.height / 4.toFloat(), detailsTextPaint)
+//
+//        canvas?.drawText("ROLE", width / 2.toFloat() + width / 4.toFloat(),
+//            layoutParams.height / 2.5.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
+//        canvas?.drawText("DELIVERABLE", width / 4.toFloat(),
+//            layoutParams.height / 2.5.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
+//        canvas?.drawText("PROJECT NAME", width / 4.toFloat(),
+//            layoutParams.height / 2.toFloat() + layoutParams.height / 4.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
+//        canvas?.drawText("HOURS", width / 2.toFloat() + width / 4.toFloat(),
+//            layoutParams.height / 2.toFloat() + layoutParams.height / 4.toFloat() + detailsTextPaint.textSize, detailsTextPaint)
+        relativeLayout?.draw(canvas)
     }
 
     /**
@@ -361,10 +376,10 @@ class PiChart @JvmOverloads constructor(
         angleUp.setFloatValues(selectedPiePieceSweepAngle, 360f)
         textAlpha.setIntValues(255, 0)
         titleAlpha.setIntValues(0, 255)
-        detailsTextAlpha.setIntValues(0, 255)
+        detailsAlpha.setFloatValues(0f, 1f)
 
         animateProjectSelection.play(angleUp).with(borderAlpha).with(textAlpha).before(shrinkChart)
-        titleExpander.play(expandTitleRight).with(expandTitleLeft).with(titleAlpha).after(animateProjectSelection).before(detailsTextAlpha)
+        titleExpander.play(expandTitleRight).with(expandTitleLeft).with(titleAlpha).after(animateProjectSelection).before(detailsAlpha)
         titleExpander.start()
     }
 
@@ -382,9 +397,9 @@ class PiChart @JvmOverloads constructor(
         borderAlpha.setIntValues(0, 255)
         textAlpha.setIntValues(0, 255)
         titleAlpha.setIntValues(255, 0)
-        detailsTextAlpha.setIntValues(255, 0)
+        detailsAlpha.setFloatValues(1f, 0f)
 
-        titleCollapser.play(expandTitleLeft).with(expandTitleRight).with(titleAlpha).after(detailsTextAlpha)
+        titleCollapser.play(expandTitleLeft).with(expandTitleRight).with(titleAlpha).after(detailsAlpha)
         animateProjectDeselection.play(titleCollapser).before(growChart).with(borderAlpha).before(angleDown).before(textAlpha)
         animateProjectDeselection.start()
     }
@@ -446,10 +461,10 @@ class PiChart @JvmOverloads constructor(
         }
 
         // Animates showing and hiding details of selected project
-        detailsTextAlpha.duration = 200
-        detailsTextAlpha.interpolator = DecelerateInterpolator()
-        detailsTextAlpha.addUpdateListener {
-            detailsTextPaint.alpha = it.animatedValue as Int
+        detailsAlpha.duration = 200
+        detailsAlpha.interpolator = DecelerateInterpolator()
+        detailsAlpha.addUpdateListener {
+            details?.alpha = it.animatedValue as Float
             invalidate()
         }
 
