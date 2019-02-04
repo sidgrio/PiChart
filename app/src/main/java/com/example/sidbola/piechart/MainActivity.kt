@@ -42,9 +42,9 @@ data class Person(
 )
 
 
-open class Animal{ }
+open class Animal {}
 
-class Dog: Animal() {}
+class Dog : Animal() {}
 
 class Other {
     fun something(animal: Animal) {

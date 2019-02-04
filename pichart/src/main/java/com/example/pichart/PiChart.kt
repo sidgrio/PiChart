@@ -9,6 +9,7 @@ import android.graphics.*
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.*
 import android.widget.RelativeLayout
 
@@ -16,10 +17,10 @@ class PiChart @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
     // Data
-    private var adapter: DetailsView.Adapter<DetailsView.ViewHolder>? = null
+    private var adapter: Adapter<ViewHolder>? = null
     private var data: PiData? = null
     private var relativeLayout: RelativeLayout? = null
-    var details: DetailsView.ViewHolder? = null
+    var details: ViewHolder? = null
 
     // State
     private var pieState = PieState.MINIMIZED
@@ -110,7 +111,7 @@ class PiChart @JvmOverloads constructor(
         invalidate()
     }
 
-    fun setAdapter(adapter: DetailsView.Adapter<DetailsView.ViewHolder>) {
+    fun setAdapter(adapter: Adapter<ViewHolder>) {
         this.adapter = adapter
         invalidate()
     }
@@ -139,8 +140,10 @@ class PiChart @JvmOverloads constructor(
             // formula for y pos: (length of line) * sin(middleAngle) + (distance from top edge of screen)
             val middleAngle = it.value.sweepAngle / 2 + it.value.startAngle
 
-            it.value.indicatorCircleLocation.x = (3 * layoutParams.height / 8) * Math.cos(Math.toRadians(middleAngle.toDouble())).toFloat() + width / 2
-            it.value.indicatorCircleLocation.y = (3 * layoutParams.height / 8) * Math.sin(Math.toRadians(middleAngle.toDouble())).toFloat() + layoutParams.height / 2
+            it.value.indicatorCircleLocation.x = (3 * layoutParams.height / 8) *
+                    Math.cos(Math.toRadians(middleAngle.toDouble())).toFloat() + width / 2
+            it.value.indicatorCircleLocation.y = (3 * layoutParams.height / 8) *
+                    Math.sin(Math.toRadians(middleAngle.toDouble())).toFloat() + layoutParams.height / 2
         }
     }
 
@@ -171,9 +174,11 @@ class PiChart @JvmOverloads constructor(
      * @param left the left bound of the circle. half of height by default
      * @param right the right bound of the circle. hald of height by default
      */
-    private fun setCircleBounds(top: Float = 0f, bottom: Float = layoutParams.height.toFloat(),
-                                left: Float = (width / 2) - (layoutParams.height / 2).toFloat(),
-                                right: Float = (width / 2) + (layoutParams.height / 2).toFloat()) {
+    private fun setCircleBounds(
+        top: Float = 0f, bottom: Float = layoutParams.height.toFloat(),
+        left: Float = (width / 2) - (layoutParams.height / 2).toFloat(),
+        right: Float = (width / 2) + (layoutParams.height / 2).toFloat()
+    ) {
         oval.top = top
         oval.bottom = bottom
         oval.left = left
@@ -183,8 +188,12 @@ class PiChart @JvmOverloads constructor(
     /**
      * Sets the bounds for the title background animation
      */
-    private fun setTitleBackgroundBounds(top: Float = 0f, bottom: Float = layoutParams.height.toFloat(), left: Float = width / 2 - (layoutParams.height / 2).toFloat(),
-                                         right: Float = width / 2 + (layoutParams.height / 2).toFloat()) {
+    private fun setTitleBackgroundBounds(
+        top: Float = 0f,
+        bottom: Float = layoutParams.height.toFloat(),
+        left: Float = width / 2 - (layoutParams.height / 2).toFloat(),
+        right: Float = width / 2 + (layoutParams.height / 2).toFloat()
+    ) {
         titleBackground.top = top
         titleBackground.bottom = bottom
         titleBackground.left = left
@@ -218,10 +227,10 @@ class PiChart @JvmOverloads constructor(
                             selectedPiePieceSweepAngle = it.value.sweepAngle
                             selectedPiePieceStartAngle = it.value.startAngle
 
-                            relativeLayout?.layout(0,0,width,height)
+                            relativeLayout?.layout(0, 0, width, height)
                             details = adapter?.createViewHolder(relativeLayout!!)
                             adapter?.bindPieViewHolder(details!!, it.key)
-                            details?.detailView?.layout(0,initialHeight,width, height)
+                            details?.detailView?.layout(0, initialHeight, width, height)
 
                             selectProject()
                             return@forEach
@@ -253,14 +262,16 @@ class PiChart @JvmOverloads constructor(
             if (event.x > pieItem.indicatorCircleLocation.x &&
                 event.x < pieItem.indicatorCircleLocation.x + width / 4 &&
                 event.y > pieItem.indicatorCircleLocation.y - mainTextPaint.textSize - 10 &&
-                event.y < pieItem.indicatorCircleLocation.y + 20) {
+                event.y < pieItem.indicatorCircleLocation.y + 20
+            ) {
                 return true
             }
             // if project is to the left of the pie chart
         } else if (event.x < pieItem.indicatorCircleLocation.x &&
             event.x > pieItem.indicatorCircleLocation.x - width / 4 &&
             event.y > pieItem.indicatorCircleLocation.y - mainTextPaint.textSize - 10 &&
-            event.y < pieItem.indicatorCircleLocation.y + 20) {
+            event.y < pieItem.indicatorCircleLocation.y + 20
+        ) {
             return true
         }
         return false
@@ -292,7 +303,12 @@ class PiChart @JvmOverloads constructor(
                     canvas?.drawArc(oval, it.startAngle, it.sweepAngle, true, borderPaint)
                 } else {
                     canvas?.drawRoundRect(titleBackground, oval.bottom / 2, oval.bottom / 2, it.paint)
-                    canvas?.drawText(it.name, width / 2.toFloat(), (oval.bottom - titleTextPaint.textSize) + 5, titleTextPaint)
+                    canvas?.drawText(
+                        it.name,
+                        width / 2.toFloat(),
+                        (oval.bottom - titleTextPaint.textSize) + 5,
+                        titleTextPaint
+                    )
                     drawDetails(canvas, it)
                 }
             }
@@ -335,19 +351,38 @@ class PiChart @JvmOverloads constructor(
     private fun drawIndicators(canvas: Canvas?, pieItem: PieSlice) {
         // draw line & text for indicator circle if on left side of the pie chart
         if (pieItem.indicatorCircleLocation.x < width / 2) {
-            canvas?.drawLine(pieItem.indicatorCircleLocation.x, pieItem.indicatorCircleLocation.y,
-                pieItem.indicatorCircleLocation.x - width / 4, pieItem.indicatorCircleLocation.y, linePaint)
+            canvas?.drawLine(
+                pieItem.indicatorCircleLocation.x, pieItem.indicatorCircleLocation.y,
+                pieItem.indicatorCircleLocation.x - width / 4, pieItem.indicatorCircleLocation.y, linePaint
+            )
             mainTextPaint.textAlign = Paint.Align.LEFT
-            canvas?.drawText(pieItem.name, pieItem.indicatorCircleLocation.x - width / 4, pieItem.indicatorCircleLocation.y - 10, mainTextPaint)
+            canvas?.drawText(
+                pieItem.name,
+                pieItem.indicatorCircleLocation.x - width / 4,
+                pieItem.indicatorCircleLocation.y - 10,
+                mainTextPaint
+            )
             // draw line & text for indicator circle if on right side of the pie chart
         } else {
-            canvas?.drawLine(pieItem.indicatorCircleLocation.x, pieItem.indicatorCircleLocation.y,
-                pieItem.indicatorCircleLocation.x + width / 4, pieItem.indicatorCircleLocation.y, linePaint)
+            canvas?.drawLine(
+                pieItem.indicatorCircleLocation.x, pieItem.indicatorCircleLocation.y,
+                pieItem.indicatorCircleLocation.x + width / 4, pieItem.indicatorCircleLocation.y, linePaint
+            )
             mainTextPaint.textAlign = Paint.Align.RIGHT
-            canvas?.drawText(pieItem.name, pieItem.indicatorCircleLocation.x + width / 4, pieItem.indicatorCircleLocation.y - 10, mainTextPaint)
+            canvas?.drawText(
+                pieItem.name,
+                pieItem.indicatorCircleLocation.x + width / 4,
+                pieItem.indicatorCircleLocation.y - 10,
+                mainTextPaint
+            )
         }
         // draw indicator circles for pie slice
-        canvas?.drawCircle(pieItem.indicatorCircleLocation.x, pieItem.indicatorCircleLocation.y, indicatorCircleRadius, indicatorCirclePaint)
+        canvas?.drawCircle(
+            pieItem.indicatorCircleLocation.x,
+            pieItem.indicatorCircleLocation.y,
+            indicatorCircleRadius,
+            indicatorCirclePaint
+        )
     }
 
     /**
@@ -387,7 +422,8 @@ class PiChart @JvmOverloads constructor(
         detailsAlpha.setFloatValues(0f, 1f)
 
         animateProjectSelection.play(angleUp).with(borderAlpha).with(textAlpha).before(shrinkChart)
-        titleExpander.play(expandTitleRight).with(expandTitleLeft).with(titleAlpha).after(animateProjectSelection).before(detailsAlpha)
+        titleExpander.play(expandTitleRight).with(expandTitleLeft).with(titleAlpha).after(animateProjectSelection)
+            .before(detailsAlpha)
         titleExpander.start()
     }
 
@@ -408,7 +444,8 @@ class PiChart @JvmOverloads constructor(
         detailsAlpha.setFloatValues(1f, 0f)
 
         titleCollapser.play(expandTitleLeft).with(expandTitleRight).with(titleAlpha).after(detailsAlpha)
-        animateProjectDeselection.play(titleCollapser).before(growChart).with(borderAlpha).before(angleDown).before(textAlpha)
+        animateProjectDeselection.play(titleCollapser).before(growChart).with(borderAlpha).before(angleDown)
+            .before(textAlpha)
         animateProjectDeselection.start()
     }
 
@@ -516,9 +553,11 @@ class PiChart @JvmOverloads constructor(
         shrinkChart.duration = 200
         shrinkChart.interpolator = DecelerateInterpolator()
         shrinkChart.addUpdateListener {
-            setCircleBounds(0f, it.animatedValue as Float,
+            setCircleBounds(
+                0f, it.animatedValue as Float,
                 width / 2 - (it.animatedValue as Float) / 2,
-                width / 2 + (it.animatedValue as Float) / 2)
+                width / 2 + (it.animatedValue as Float) / 2
+            )
             invalidate()
         }
         shrinkChart.addListener(object : AnimatorListenerAdapter() {
@@ -534,9 +573,11 @@ class PiChart @JvmOverloads constructor(
         growChart.startDelay = 100
         growChart.interpolator = DecelerateInterpolator()
         growChart.addUpdateListener {
-            setCircleBounds(0f, it.animatedValue as Float,
+            setCircleBounds(
+                0f, it.animatedValue as Float,
                 width / 2 - (it.animatedValue as Float) / 2,
-                width / 2 + (it.animatedValue as Float) / 2)
+                width / 2 + (it.animatedValue as Float) / 2
+            )
             invalidate()
         }
 
@@ -555,5 +596,14 @@ class PiChart @JvmOverloads constructor(
             titleBackground.right = it.animatedValue as Float
             invalidate()
         }
+    }
+
+    abstract class Adapter<PVH : PiChart.ViewHolder> {
+        abstract fun createViewHolder(parent: ViewGroup): PVH
+        abstract fun bindPieViewHolder(viewHolder: PVH, key: String)
+    }
+
+    abstract class ViewHolder(val detailView: View) {
+        var key: String = ""
     }
 }

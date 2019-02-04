@@ -4,16 +4,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import com.example.pichart.DetailsView
+import com.example.pichart.PiChart
 import com.example.pichart.PieSlice
 import kotlinx.android.synthetic.main.view_pie_detail.view.*
 import kotlin.collections.HashMap
 
 class PeopleChartDetailsAdapter(val pieSlices: HashMap<String, PieSlice>) :
-    DetailsView.Adapter<PeopleChartDetailsAdapter.PeopleViewHolder>() {
+    PiChart.Adapter<PeopleChartDetailsAdapter.PeopleViewHolder>() {
 
-    inner class PeopleViewHolder(detailView: View) : DetailsView.ViewHolder(detailView) {
-        val nameLabel :TextView = detailView.name
+    inner class PeopleViewHolder(detailView: View) : PiChart.ViewHolder(detailView) {
+        val nameLabel: TextView = detailView.name
     }
 
     override fun createViewHolder(parent: ViewGroup): PeopleViewHolder {
