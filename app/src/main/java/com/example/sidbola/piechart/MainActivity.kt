@@ -1,17 +1,12 @@
 package com.example.sidbola.piechart
 
-import android.graphics.Color
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
-import android.support.constraint.ConstraintLayout
 import android.view.Gravity
-import android.view.LayoutInflater
 import android.widget.TextView
 import com.example.pichart.PiData
 import com.example.pichart.PiTestMessage
 import kotlinx.android.synthetic.main.activity_main.*
-import android.widget.RelativeLayout
-
 
 
 class MainActivity : AppCompatActivity() {
@@ -32,13 +27,31 @@ class MainActivity : AppCompatActivity() {
 
         val view = TextView(this)
         view.text = "Hellos"
-        //val layoutParams = ConstraintLayout.LayoutParams(ConstraintLayout.LayoutParams.MATCH_PARENT, ConstraintLayout.LayoutParams.MATCH_PARENT)
-        //view.layoutParams = layoutParams
         view.gravity = Gravity.CENTER
 
-        //main_view.addView(view)
-
-        pie_chart.setView(view)
         pie_chart.setData(data)
+        val adapter = PeopleChartDetailsAdapter(data.pieSlices)
+        pie_chart.setAdapter(adapter)
+    }
+}
+
+data class Person(
+    val name: String,
+    val value: Double,
+    val color: String
+)
+
+
+open class Animal{ }
+
+class Dog: Animal() {}
+
+class Other {
+    fun something(animal: Animal) {
+        val something = 5
+    }
+
+    init {
+        something(Dog())
     }
 }

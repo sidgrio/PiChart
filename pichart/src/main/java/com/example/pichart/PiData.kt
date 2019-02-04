@@ -3,10 +3,13 @@ package com.example.pichart
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PointF
+import android.view.View
+import android.view.ViewGroup
+import java.lang.IllegalArgumentException
 import java.util.*
 
 class PiData {
-    val pieSlices = HashMap<String, PieSlice>()
+    var pieSlices = HashMap<String, PieSlice>()
     var totalValue = 0.0
 
     /**

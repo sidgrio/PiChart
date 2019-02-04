@@ -16,9 +16,10 @@ class PiChart @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
     // Data
+    private var adapter: DetailsView.Adapter<DetailsView.ViewHolder>? = null
     private var data: PiData? = null
-    private var details: View? = null
     private var relativeLayout: RelativeLayout? = null
+    var details: DetailsView.ViewHolder? = null
 
     // State
     private var pieState = PieState.MINIMIZED
@@ -109,11 +110,16 @@ class PiChart @JvmOverloads constructor(
         invalidate()
     }
 
+    fun setAdapter(adapter: DetailsView.Adapter<DetailsView.ViewHolder>) {
+        this.adapter = adapter
+        invalidate()
+    }
+
     fun setView(view: View) {
-        relativeLayout = RelativeLayout(context)
-        details = view
-        relativeLayout?.addView(details)
-        details?.alpha = 0f
+//        relativeLayout = RelativeLayout(context)
+//        details = view
+//        relativeLayout?.addView(details)
+//        details?.alpha = 0f
     }
 
     /**
@@ -213,7 +219,9 @@ class PiChart @JvmOverloads constructor(
                             selectedPiePieceStartAngle = it.value.startAngle
 
                             relativeLayout?.layout(0,0,width,height)
-                            details?.layout(0,initialHeight,width, height)
+                            details = adapter?.createViewHolder(relativeLayout!!)
+                            adapter?.bindPieViewHolder(details!!, it.key)
+                            details?.detailView?.layout(0,initialHeight,width, height)
 
                             selectProject()
                             return@forEach
@@ -464,7 +472,7 @@ class PiChart @JvmOverloads constructor(
         detailsAlpha.duration = 200
         detailsAlpha.interpolator = DecelerateInterpolator()
         detailsAlpha.addUpdateListener {
-            details?.alpha = it.animatedValue as Float
+            details?.detailView?.alpha = it.animatedValue as Float
             invalidate()
         }
 
