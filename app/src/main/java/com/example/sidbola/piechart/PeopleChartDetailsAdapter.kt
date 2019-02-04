@@ -9,6 +9,7 @@ import com.example.pichart.PieSlice
 import kotlinx.android.synthetic.main.view_pie_detail.view.*
 import kotlin.collections.HashMap
 
+// TODO: Move data input logic to be handled by this adapter instead of PiData object
 class PeopleChartDetailsAdapter(val pieSlices: HashMap<String, PieSlice>) :
     PiChart.Adapter<PeopleChartDetailsAdapter.PeopleViewHolder>() {
 
